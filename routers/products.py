@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 
 from database import get_db
@@ -34,6 +34,20 @@ async def them_san_pham(product: ProductCreate, current_admin: dict = Depends(ge
 async def danh_sach_san_pham():
     db = get_db()
     products = await db.products.find().to_list(1000)
+    return [convert_objectid_to_str(p) for p in products]
+
+@router.get("/tim-kiem", response_model=List[ProductResponse])
+async def tim_kiem_san_pham(tu_khoa: Optional[str] = None, danh_muc: Optional[str] = None):
+    db = get_db()
+    query: dict = {}
+    
+    if tu_khoa:
+        query["name"] = {"$regex": tu_khoa, "$options": "i"}
+        
+    if danh_muc:
+        query["category"] = danh_muc
+        
+    products = await db.products.find(query).to_list(1000)
     return [convert_objectid_to_str(p) for p in products]
 
 @router.get("/chi-tiet/{product_id}", response_model=ProductResponse)
