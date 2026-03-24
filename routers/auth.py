@@ -7,9 +7,9 @@ from database import get_db
 from models.user import UserCreate, UserResponse, Token
 from utils.security import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/xac-thuc", tags=["auth"])
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/dang-ky", response_model=UserResponse)
 async def register(user: UserCreate):
     db = get_db()
     
@@ -32,7 +32,7 @@ async def register(user: UserCreate):
     
     return UserResponse(username=user.username, email=user.email, role=user.role)
 
-@router.post("/login", response_model=Token)
+@router.post("/dang-nhap", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     db = get_db()
     
