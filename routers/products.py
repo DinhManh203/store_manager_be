@@ -3,8 +3,9 @@ from typing import List
 from datetime import datetime, timezone
 
 from database import get_db
-from models.product import ProductCreate, ProductResponse
+from models.product import ProductCreate, ProductResponse, ProductUpdate
 from utils.dependencies import get_current_admin
+from bson import ObjectId
 
 router = APIRouter(prefix="/san-pham", tags=["san-pham"])
 
@@ -28,3 +29,49 @@ async def them_san_pham(product: ProductCreate, current_admin: dict = Depends(ge
         return convert_objectid_to_str(created_product)
         
     raise HTTPException(status_code=500, detail="Không thể tạo sản phẩm")
+
+@router.get("/danh-sach", response_model=List[ProductResponse])
+async def danh_sach_san_pham():
+    db = get_db()
+    products = await db.products.find().to_list(1000)
+    return [convert_objectid_to_str(p) for p in products]
+
+@router.get("/chi-tiet/{product_id}", response_model=ProductResponse)
+async def chi_tiet_san_pham(product_id: str):
+    db = get_db()
+    if not ObjectId.is_valid(product_id):
+        raise HTTPException(status_code=400, detail="ID sản phẩm không hợp lệ")
+    product = await db.products.find_one({"_id": ObjectId(product_id)})
+    if not product:
+        raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
+    return convert_objectid_to_str(product)
+
+@router.put("/chinh-sua/{product_id}", response_model=ProductResponse)
+async def chinh_sua_san_pham(product_id: str, product_update: ProductUpdate, current_admin: dict = Depends(get_current_admin)):
+    db = get_db()
+    if not ObjectId.is_valid(product_id):
+        raise HTTPException(status_code=400, detail="ID sản phẩm không hợp lệ")
+        
+    update_data = {k: v for k, v in product_update.model_dump().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Không có dữ liệu gì để cập nhật")
+        
+    result = await db.products.update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
+        
+    updated_product = await db.products.find_one({"_id": ObjectId(product_id)})
+    return convert_objectid_to_str(updated_product)
+
+@router.delete("/xoa/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def xoa_san_pham(product_id: str, current_admin: dict = Depends(get_current_admin)):
+    db = get_db()
+    if not ObjectId.is_valid(product_id):
+        raise HTTPException(status_code=400, detail="ID sản phẩm không hợp lệ")
+        
+    result = await db.products.delete_one({"_id": ObjectId(product_id)})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
