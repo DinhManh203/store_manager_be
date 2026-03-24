@@ -6,7 +6,7 @@ from database import get_db
 from models.product import ProductCreate, ProductResponse
 from utils.dependencies import get_current_admin
 
-router = APIRouter(prefix="/san-pham", tags=["products"])
+router = APIRouter(prefix="/san-pham", tags=["san-pham"])
 
 def convert_objectid_to_str(item: dict) -> dict:
     if "_id" in item:
@@ -15,7 +15,7 @@ def convert_objectid_to_str(item: dict) -> dict:
     return item
 
 @router.post("/them-san-pham", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
-async def create_product(product: ProductCreate, current_admin: dict = Depends(get_current_admin)):
+async def them_san_pham(product: ProductCreate, current_admin: dict = Depends(get_current_admin)):
     db = get_db()
     
     product_dict = product.model_dump()

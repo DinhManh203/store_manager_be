@@ -7,10 +7,10 @@ from database import get_db
 from models.user import UserCreate, UserResponse, Token
 from utils.security import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
-router = APIRouter(prefix="/xac-thuc", tags=["auth"])
+router = APIRouter(prefix="/xac-thuc", tags=["xac-thuc"])
 
 @router.post("/dang-ky", response_model=UserResponse)
-async def register(user: UserCreate):
+async def dang_ky(user: UserCreate):
     db = get_db()
     
     existing_user_email = await db.users.find_one({"email": user.email})
@@ -33,7 +33,7 @@ async def register(user: UserCreate):
     return UserResponse(username=user.username, email=user.email, role=user.role)
 
 @router.post("/dang-nhap", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def dang_nhap(form_data: OAuth2PasswordRequestForm = Depends()):
     db = get_db()
     
     user_in_db = await db.users.find_one({"username": form_data.username})
