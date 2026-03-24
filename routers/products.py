@@ -5,15 +5,10 @@ from datetime import datetime, timezone
 from database import get_db
 from models.product import ProductCreate, ProductResponse, ProductUpdate
 from utils.dependencies import get_current_admin
+from utils.helpers import convert_objectid_to_str, is_valid_objectid
 from bson import ObjectId
 
 router = APIRouter(prefix="/san-pham", tags=["san-pham"])
-
-def convert_objectid_to_str(item: dict) -> dict:
-    if "_id" in item:
-        item["id"] = str(item["_id"])
-        del item["_id"]
-    return item
 
 @router.post("/them-san-pham", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def them_san_pham(product: ProductCreate, current_admin: dict = Depends(get_current_admin)):
