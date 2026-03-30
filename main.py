@@ -15,4 +15,9 @@ app.include_router(reports.router)
 
 @app.get("/")
 def read_root():
-    return {"message": "Xin chào - Hệ thống Quản lý Kho"}
+    return {"message": "Backend is running"}
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
