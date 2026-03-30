@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -18,11 +19,32 @@ router = APIRouter(prefix="/xac-thuc", tags=["xac-thuc"])
 @router.post("/dang-nhap", response_model=Token)
 async def dang_nhap(form_data: OAuth2PasswordRequestForm = Depends()):
     db = get_db()
+    env_admin_username = os.getenv("ADMIN_USER_NAME", "").strip()
+    env_admin_password = os.getenv("ADMIN_PASSWORD", "").strip()
+    login_identifier = form_data.username.strip()
+
+    if (
+        env_admin_username
+        and env_admin_password
+        and login_identifier == env_admin_username
+        and form_data.password == env_admin_password
+    ):
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={
+                "sub": env_admin_username,
+                "role": "admin",
+                "is_env_admin": True,
+            },
+            expires_delta=access_token_expires,
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+
     try:
-        user_in_db = await db.users.find_one({"username": form_data.username})
+        user_in_db = await db.users.find_one({"username": login_identifier})
 
         if not user_in_db:
-            user_in_db = await db.users.find_one({"email": form_data.username})
+            user_in_db = await db.users.find_one({"email": login_identifier})
 
         if not user_in_db:
             raise HTTPException(

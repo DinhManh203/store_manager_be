@@ -1,6 +1,9 @@
+import os
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
+from pymongo.errors import PyMongoError
 
 from database import get_db
 from models.user import UserRole
@@ -20,13 +23,27 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-        
+
+    env_admin_username = os.getenv("ADMIN_USER_NAME", "").strip()
+    if payload.get("is_env_admin") and username == env_admin_username:
+        return {
+            "username": username,
+            "role": UserRole.admin.value,
+            "email": f"{username}@env.local",
+            "is_demo_admin": True,
+        }
+
     db = get_db()
-    user = await db.users.find_one({"username": username})
-    if user is None:
-        raise credentials_exception
-        
-    return user
+    try:
+        user = await db.users.find_one({"username": username})
+        if user is None:
+            raise credentials_exception
+        return user
+    except PyMongoError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Khong the ket noi co so du lieu. Vui long thu lai sau.",
+        )
 
 async def get_current_admin(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != UserRole.admin.value:
