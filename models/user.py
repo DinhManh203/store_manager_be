@@ -46,7 +46,7 @@ class EmployeeCreate(BaseModel):
     def validate_phone(cls, value: str) -> str:
         normalized = value.strip().replace(" ", "")
         if not re.fullmatch(r"^\+?[0-9]{9,15}$", normalized):
-            raise ValueError("So dien thoai khong hop le")
+            raise ValueError("Số điện thoại không hợp lệ")
         return normalized
 
 class EmployeeCreateResponse(BaseModel):

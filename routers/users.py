@@ -49,11 +49,11 @@ async def tao_nhan_vien(payload: EmployeeCreate, current_admin: dict = Depends(g
 
     existing_user_email = await db.users.find_one({"email": normalized_email})
     if existing_user_email:
-        raise HTTPException(status_code=400, detail="Email nay da duoc dang ky")
+        raise HTTPException(status_code=400, detail="Email này đã được đăng ký")
 
     existing_user_phone = await db.users.find_one({"phone": normalized_phone})
     if existing_user_phone:
-        raise HTTPException(status_code=400, detail="So dien thoai nay da ton tai")
+        raise HTTPException(status_code=400, detail="Số điện thoại này đã tồn tại")
 
     generated_username = await _generate_unique_username(db, normalized_email)
 
