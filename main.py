@@ -62,7 +62,10 @@ async def ensure_demo_admin_account():
 
 @app.on_event("startup")
 async def startup_event():
-    await ensure_demo_admin_account()
+    try:
+        await ensure_demo_admin_account()
+    except Exception as error:
+        print(f"[startup] Skip demo admin seed: {error}")
 
 
 @app.get("/")
