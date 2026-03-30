@@ -52,10 +52,42 @@ class EmployeeCreate(BaseModel):
 class EmployeeCreateResponse(BaseModel):
     id: str
     username: str
-    full_name: str
+    full_name: Optional[str] = None
     email: EmailStr
-    phone: str
+    phone: Optional[str] = None
     role: UserRole
+
+class EmployeeUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, min_length=9, max_length=15)
+    role: Optional[UserRole] = None
+    temporary_password: Optional[str] = Field(default=None, min_length=8, max_length=128)
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name_update(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("Ten nhan vien khong duoc de trong")
+        return normalized
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone_update(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = value.strip().replace(" ", "")
+        if not re.fullmatch(r"^\+?[0-9]{9,15}$", normalized):
+            raise ValueError("So dien thoai khong hop le")
+        return normalized
+
+class EmployeeDeleteResponse(BaseModel):
+    message: str
+    deleted_user_id: str
+    deleted_username: str
 
 class Token(BaseModel):
     access_token: str
