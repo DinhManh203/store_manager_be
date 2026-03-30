@@ -5,3 +5,4 @@ python-jose[cryptography]
 bcrypt
 email-validator
 python-multipart
+certifi
