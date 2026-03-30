@@ -34,6 +34,25 @@ async def bang_dieu_khien_quan_tri(current_admin: dict = Depends(get_current_adm
     }
 
 
+@router.get("/quan-tri/danh-sach-nhan-vien", response_model=list[EmployeeCreateResponse])
+async def danh_sach_nhan_vien(current_admin: dict = Depends(get_current_admin)):
+    db = get_db()
+    employees: list[EmployeeCreateResponse] = []
+
+    try:
+        cursor = db.users.find({"is_demo_admin": {"$ne": True}}).sort("created_at", -1)
+        async for user_doc in cursor:
+            if not user_doc.get("username") or not user_doc.get("email"):
+                continue
+            employees.append(_employee_response_from_doc(user_doc))
+        return employees
+    except PyMongoError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau.",
+        )
+
+
 async def _generate_unique_username(db, email: str) -> str:
     local_part = email.split("@")[0].lower()
     base_username = re.sub(r"[^a-z0-9._-]", "", local_part) or "nhanvien"
