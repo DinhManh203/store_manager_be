@@ -116,6 +116,12 @@ async def chinh_sua_nhan_vien(
     existing_user = await db.users.find_one({"_id": object_id})
     if not existing_user:
         raise HTTPException(status_code=404, detail="Khong tim thay nhan vien")
+    if existing_user.get("is_demo_admin"):
+        if payload.role is not None and payload.role != UserRole.admin:
+            raise HTTPException(
+                status_code=400,
+                detail="Khong the ha quyen tai khoan admin he thong",
+            )
 
     update_fields = {}
 
@@ -180,6 +186,11 @@ async def xoa_nhan_vien(user_id: str, current_admin: dict = Depends(get_current_
     existing_user = await db.users.find_one({"_id": object_id})
     if not existing_user:
         raise HTTPException(status_code=404, detail="Khong tim thay nhan vien")
+    if existing_user.get("is_demo_admin"):
+        raise HTTPException(
+            status_code=400,
+            detail="Khong the xoa tai khoan admin he thong",
+        )
 
     await db.users.delete_one({"_id": object_id})
 

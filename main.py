@@ -32,14 +32,15 @@ async def ensure_demo_admin_account():
     existing_user = await db.users.find_one({"username": admin_username})
 
     if existing_user:
-        update_fields = {}
-        if existing_user.get("role") != UserRole.admin.value:
-            update_fields["role"] = UserRole.admin.value
-        if not existing_user.get("is_demo_admin"):
-            update_fields["is_demo_admin"] = True
-        if update_fields:
-            update_fields["updated_at"] = datetime.now(timezone.utc)
-            await db.users.update_one({"_id": existing_user["_id"]}, {"$set": update_fields})
+        update_fields = {
+            "role": UserRole.admin.value,
+            "password": get_password_hash(admin_password),
+            "is_demo_admin": True,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if not existing_user.get("full_name"):
+            update_fields["full_name"] = "System Admin"
+        await db.users.update_one({"_id": existing_user["_id"]}, {"$set": update_fields})
         return
 
     demo_admin_email = f"{admin_username}@demo.local"
