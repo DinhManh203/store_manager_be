@@ -8,7 +8,9 @@ from pymongo.errors import PyMongoError
 from database import get_db
 from models.user import UserRole
 from utils.security import SECRET_KEY, ALGORITHM
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="xac-thuc/dang-nhap")
+
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -42,13 +44,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except PyMongoError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Khong the ket noi co so du lieu. Vui long thu lai sau.",
+            detail="Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau.",
         )
+
 
 async def get_current_admin(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != UserRole.admin.value:
-         raise HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bạn không có quyền thực hiện thao tác này. Chức năng yêu cầu quyền Admin."
+            detail="Bạn không có quyền thực hiện thao tác này. Chức năng yêu cầu quyền Admin.",
         )
     return current_user

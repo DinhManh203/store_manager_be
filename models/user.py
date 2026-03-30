@@ -1,11 +1,14 @@
 import re
-from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Optional
 from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
 
 class UserRole(str, Enum):
     admin = "admin"
     user = "user"
+
 
 class UserCreate(BaseModel):
     username: str
@@ -15,9 +18,11 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
 
+
 class UserLogin(BaseModel):
     username: str
     password: str
+
 
 class UserResponse(BaseModel):
     username: str
@@ -25,6 +30,7 @@ class UserResponse(BaseModel):
     role: UserRole
     full_name: Optional[str] = None
     phone: Optional[str] = None
+
 
 class EmployeeCreate(BaseModel):
     full_name: str = Field(min_length=2, max_length=100)
@@ -49,6 +55,7 @@ class EmployeeCreate(BaseModel):
             raise ValueError("Số điện thoại không hợp lệ")
         return normalized
 
+
 class EmployeeCreateResponse(BaseModel):
     id: str
     username: str
@@ -56,6 +63,7 @@ class EmployeeCreateResponse(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     role: UserRole
+
 
 class EmployeeUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
@@ -71,7 +79,7 @@ class EmployeeUpdate(BaseModel):
             return value
         normalized = " ".join(value.split())
         if not normalized:
-            raise ValueError("Ten nhan vien khong duoc de trong")
+            raise ValueError("Tên nhân viên không được để trống")
         return normalized
 
     @field_validator("phone")
@@ -81,17 +89,20 @@ class EmployeeUpdate(BaseModel):
             return value
         normalized = value.strip().replace(" ", "")
         if not re.fullmatch(r"^\+?[0-9]{9,15}$", normalized):
-            raise ValueError("So dien thoai khong hop le")
+            raise ValueError("Số điện thoại không hợp lệ")
         return normalized
+
 
 class EmployeeDeleteResponse(BaseModel):
     message: str
     deleted_user_id: str
     deleted_username: str
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 class TokenData(BaseModel):
     username: Optional[str] = None

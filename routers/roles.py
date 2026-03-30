@@ -18,11 +18,11 @@ async def danh_sach_quyen():
 async def them_quyen(role_name: str, current_admin: dict = Depends(get_current_admin)):
     existing_roles = [r.value for r in UserRole]
     if role_name in existing_roles:
-        raise HTTPException(status_code=400, detail="Quyen nay da ton tai")
+        raise HTTPException(status_code=400, detail="Quyền này đã tồn tại")
     return {
         "message": (
-            f"Quyen '{role_name}' da duoc ghi nhan. "
-            "Luu y: can cap nhat Enum UserRole trong code de ap dung vinh vien."
+            f"Quyền '{role_name}' đã được ghi nhận. "
+            "Lưu ý: cần cập nhật Enum UserRole trong code để áp dụng vĩnh viễn."
         ),
         "role": role_name,
     }
@@ -36,21 +36,21 @@ async def cap_nhat_quyen_nguoi_dung(
 ):
     db = get_db()
     if not is_valid_objectid(user_id):
-        raise HTTPException(status_code=400, detail="ID nguoi dung khong hop le")
+        raise HTTPException(status_code=400, detail="ID người dùng không hợp lệ")
 
     valid_roles = [r.value for r in UserRole]
     if role not in valid_roles:
         raise HTTPException(
             status_code=400,
-            detail=f"Quyen khong hop le. Cac quyen cho phep: {', '.join(valid_roles)}",
+            detail=f"Quyền không hợp lệ. Các quyền cho phép: {', '.join(valid_roles)}",
         )
 
     user = await db.users.find_one({"_id": ObjectId(user_id)})
     if not user:
-        raise HTTPException(status_code=404, detail="Khong tim thay nguoi dung")
+        raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
 
     if user.get("is_demo_admin") and role != UserRole.admin.value:
-        raise HTTPException(status_code=400, detail="Khong the ha quyen tai khoan admin he thong")
+        raise HTTPException(status_code=400, detail="Không thể hạ quyền tài khoản admin hệ thống")
 
     await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"role": role}})
-    return {"message": f"Da cap nhat quyen cua '{user['username']}' thanh '{role}'"}
+    return {"message": f"Đã cập nhật quyền của '{user['username']}' thành '{role}'"}

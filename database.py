@@ -6,9 +6,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGO_DETAILS = os.getenv("MONGO_DETAILS")
+MONGO_TIMEOUT_MS = int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "5000"))
 
 client_options = {
-    "serverSelectionTimeoutMS": 30000,
+    "serverSelectionTimeoutMS": MONGO_TIMEOUT_MS,
 }
 if MONGO_DETAILS and MONGO_DETAILS.startswith("mongodb+srv://"):
     client_options["tls"] = True

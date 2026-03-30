@@ -49,14 +49,14 @@ async def dang_nhap(form_data: OAuth2PasswordRequestForm = Depends()):
         if not user_in_db:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Tai khoan khong ton tai.",
+                detail="Tài khoản không tồn tại.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
         if not verify_password(form_data.password, user_in_db["password"]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Sai mat khau.",
+                detail="Sai mật khẩu.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -72,5 +72,5 @@ async def dang_nhap(form_data: OAuth2PasswordRequestForm = Depends()):
     except PyMongoError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Khong the ket noi co so du lieu. Vui long thu lai sau.",
+            detail="Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau.",
         )

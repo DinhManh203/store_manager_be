@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import datetime, timezone
 
@@ -63,10 +64,15 @@ async def ensure_demo_admin_account():
 
 @app.on_event("startup")
 async def startup_event():
-    try:
-        await ensure_demo_admin_account()
-    except Exception as error:
-        print(f"[startup] Skip demo admin seed: {error}")
+    async def seed_demo_admin():
+        try:
+            await asyncio.wait_for(ensure_demo_admin_account(), timeout=5)
+        except asyncio.TimeoutError:
+            print("[startup] Skip demo admin seed: database timeout")
+        except Exception as error:
+            print(f"[startup] Skip demo admin seed: {error}")
+
+    asyncio.create_task(seed_demo_admin())
 
 
 @app.get("/")
