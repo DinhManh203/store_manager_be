@@ -32,6 +32,41 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
 
 
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, min_length=9, max_length=15)
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name_update(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("Ten nguoi dung khong duoc de trong")
+        return normalized
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone_update(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = value.strip().replace(" ", "")
+        if not re.fullmatch(r"^\+?[0-9]{9,15}$", normalized):
+            raise ValueError("So dien thoai khong hop le")
+        return normalized
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class ChangePasswordResponse(BaseModel):
+    message: str
+
+
 class EmployeeCreate(BaseModel):
     full_name: str = Field(min_length=2, max_length=100)
     email: EmailStr

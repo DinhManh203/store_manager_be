@@ -6,7 +6,18 @@ from fastapi import FastAPI
 
 from database import get_db
 from models.user import UserRole
-from routers import auth, users, products, suppliers, inventory, imports, exports, roles, reports
+from routers import (
+    auth,
+    users,
+    products,
+    suppliers,
+    inventory,
+    imports,
+    exports,
+    roles,
+    reports,
+    notifications,
+)
 from utils.security import get_password_hash
 
 app = FastAPI(title="Hệ thống Quản lý Kho", version="1.0.0")
@@ -20,6 +31,7 @@ app.include_router(imports.router)
 app.include_router(exports.router)
 app.include_router(roles.router)
 app.include_router(reports.router)
+app.include_router(notifications.router)
 
 
 async def ensure_demo_admin_account():

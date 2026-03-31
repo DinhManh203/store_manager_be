@@ -7,23 +7,143 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from database import get_db
 from models.user import (
+    ChangePasswordRequest,
+    ChangePasswordResponse,
     EmployeeCreate,
     EmployeeCreateResponse,
     EmployeeDeleteResponse,
     EmployeeUpdate,
+    ProfileUpdate,
     UserResponse,
     UserRole,
 )
 from utils.dependencies import get_current_admin, get_current_user
 from utils.helpers import is_valid_objectid
-from utils.security import get_password_hash
+from utils.security import get_password_hash, verify_password
 
 router = APIRouter(prefix="/nguoi-dung", tags=["nguoi-dung"])
 
 
 @router.get("/ho-so", response_model=UserResponse)
 async def ho_so(current_user: dict = Depends(get_current_user)):
-    return UserResponse(**current_user)
+    return _user_response_from_doc(current_user)
+
+
+@router.put("/ho-so", response_model=UserResponse)
+async def cap_nhat_ho_so(
+    payload: ProfileUpdate, current_user: dict = Depends(get_current_user)
+):
+    db = get_db()
+    object_id = _current_user_object_id(current_user)
+
+    if object_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Tai khoan hien tai khong ho tro cap nhat ho so qua API.",
+        )
+
+    try:
+        existing_user = await db.users.find_one({"_id": object_id})
+        if not existing_user:
+            raise HTTPException(status_code=404, detail="Khong tim thay nguoi dung")
+
+        update_fields = {}
+
+        if payload.full_name is not None:
+            update_fields["full_name"] = payload.full_name
+
+        if payload.email is not None:
+            normalized_email = payload.email.lower()
+            duplicated_email = await db.users.find_one(
+                {"email": normalized_email, "_id": {"$ne": object_id}}
+            )
+            if duplicated_email:
+                raise HTTPException(status_code=400, detail="Email nay da duoc dang ky")
+            update_fields["email"] = normalized_email
+
+        if payload.phone is not None:
+            normalized_phone = payload.phone
+            duplicated_phone = await db.users.find_one(
+                {"phone": normalized_phone, "_id": {"$ne": object_id}}
+            )
+            if duplicated_phone:
+                raise HTTPException(status_code=400, detail="So dien thoai nay da ton tai")
+            update_fields["phone"] = normalized_phone
+
+        if not update_fields:
+            raise HTTPException(status_code=400, detail="Khong co du lieu de cap nhat")
+
+        update_fields["updated_at"] = datetime.now(timezone.utc)
+
+        await db.users.update_one({"_id": object_id}, {"$set": update_fields})
+        updated_user = await db.users.find_one({"_id": object_id})
+        if not updated_user:
+            raise HTTPException(status_code=404, detail="Khong tim thay nguoi dung")
+
+        return _user_response_from_doc(updated_user)
+    except HTTPException:
+        raise
+    except DuplicateKeyError:
+        raise HTTPException(status_code=400, detail="Email hoac so dien thoai da ton tai")
+    except PyMongoError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Khong the ket noi co so du lieu. Vui long thu lai sau.",
+        )
+
+
+@router.put("/doi-mat-khau", response_model=ChangePasswordResponse)
+async def doi_mat_khau(
+    payload: ChangePasswordRequest, current_user: dict = Depends(get_current_user)
+):
+    db = get_db()
+    object_id = _current_user_object_id(current_user)
+
+    if object_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Tai khoan hien tai khong ho tro doi mat khau qua API.",
+        )
+
+    if payload.current_password == payload.new_password:
+        raise HTTPException(status_code=400, detail="Mat khau moi phai khac mat khau hien tai")
+
+    try:
+        existing_user = await db.users.find_one({"_id": object_id})
+        if not existing_user:
+            raise HTTPException(status_code=404, detail="Khong tim thay nguoi dung")
+
+        hashed_password = existing_user.get("password")
+        if not isinstance(hashed_password, str) or not hashed_password:
+            raise HTTPException(status_code=400, detail="Tai khoan khong co mat khau hop le")
+
+        try:
+            is_valid_password = verify_password(payload.current_password, hashed_password)
+        except ValueError:
+            is_valid_password = False
+
+        if not is_valid_password:
+            raise HTTPException(status_code=400, detail="Mat khau hien tai khong dung")
+
+        await db.users.update_one(
+            {"_id": object_id},
+            {
+                "$set": {
+                    "password": get_password_hash(payload.new_password),
+                    "is_temporary_password": False,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            },
+        )
+
+        return ChangePasswordResponse(message="Doi mat khau thanh cong")
+    except HTTPException:
+        raise
+    except PyMongoError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Khong the ket noi co so du lieu. Vui long thu lai sau.",
+        )
 
 
 @router.get("/quan-tri/bang-dieu-khien")
@@ -81,6 +201,33 @@ def _employee_response_from_doc(user_doc: dict) -> EmployeeCreateResponse:
         phone=user_doc.get("phone"),
         role=role,
     )
+
+
+def _user_response_from_doc(user_doc: dict) -> UserResponse:
+    role_value = user_doc.get("role", UserRole.user.value)
+    try:
+        role = UserRole(role_value)
+    except ValueError:
+        role = UserRole.user
+
+    return UserResponse(
+        username=user_doc.get("username", ""),
+        email=user_doc.get("email", ""),
+        role=role,
+        full_name=user_doc.get("full_name"),
+        phone=user_doc.get("phone"),
+    )
+
+
+def _current_user_object_id(current_user: dict) -> ObjectId | None:
+    raw_object_id = current_user.get("_id")
+    if isinstance(raw_object_id, ObjectId):
+        return raw_object_id
+
+    if isinstance(raw_object_id, str) and is_valid_objectid(raw_object_id):
+        return ObjectId(raw_object_id)
+
+    return None
 
 
 @router.post(

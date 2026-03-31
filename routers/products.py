@@ -4,6 +4,10 @@ from datetime import datetime, timezone
 
 from database import get_db
 from models.product import ProductCreate, ProductResponse, ProductUpdate
+from routers.notifications import (
+    create_product_created_notification,
+    create_product_updated_notification,
+)
 from utils.dependencies import get_current_admin, get_current_user
 from utils.helpers import convert_objectid_to_str, is_valid_objectid
 from bson import ObjectId
@@ -21,6 +25,11 @@ async def them_san_pham(product: ProductCreate, current_user: dict = Depends(get
     
     created_product = await db.products.find_one({"_id": result.inserted_id})
     if created_product:
+        try:
+            await create_product_created_notification(current_user, created_product)
+        except Exception:
+            # Notification failure must not block product creation.
+            pass
         return convert_objectid_to_str(created_product)
         
     raise HTTPException(status_code=500, detail="Không thể tạo sản phẩm")
@@ -56,7 +65,11 @@ async def chi_tiet_san_pham(product_id: str):
     return convert_objectid_to_str(product)
 
 @router.put("/chinh-sua/{product_id}", response_model=ProductResponse)
-async def chinh_sua_san_pham(product_id: str, product_update: ProductUpdate, current_admin: dict = Depends(get_current_admin)):
+async def chinh_sua_san_pham(
+    product_id: str,
+    product_update: ProductUpdate,
+    current_user: dict = Depends(get_current_user),
+):
     db = get_db()
     if not ObjectId.is_valid(product_id):
         raise HTTPException(status_code=400, detail="ID sản phẩm không hợp lệ")
@@ -72,6 +85,15 @@ async def chinh_sua_san_pham(product_id: str, product_update: ProductUpdate, cur
         raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
         
     updated_product = await db.products.find_one({"_id": ObjectId(product_id)})
+    if not updated_product:
+        raise HTTPException(status_code=404, detail="KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m")
+
+    try:
+        await create_product_updated_notification(current_user, updated_product)
+    except Exception:
+        # Notification failure must not block product update.
+        pass
+
     return convert_objectid_to_str(updated_product)
 
 @router.delete("/xoa/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
