@@ -110,7 +110,7 @@ async def tao_nhan_vien(payload: EmployeeCreate, current_admin: dict = Depends(g
             "email": normalized_email,
             "phone": normalized_phone,
             "password": get_password_hash(payload.temporary_password),
-            "role": payload.role.value,
+            "role": UserRole.user.value,
             "is_temporary_password": True,
             "created_by": current_admin["username"],
             "created_at": datetime.now(timezone.utc),
