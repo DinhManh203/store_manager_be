@@ -31,7 +31,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         return {
             "username": username,
             "role": UserRole.admin.value,
-            "email": f"{username}@env.local",
+            "email": f"{username}@storemanager.app",
             "is_demo_admin": True,
         }
 

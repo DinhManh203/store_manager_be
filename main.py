@@ -17,6 +17,7 @@ from routers import (
     roles,
     reports,
     notifications,
+    branches,
 )
 from utils.security import get_password_hash
 
@@ -32,6 +33,7 @@ app.include_router(exports.router)
 app.include_router(roles.router)
 app.include_router(reports.router)
 app.include_router(notifications.router)
+app.include_router(branches.router)
 
 
 async def ensure_demo_admin_account():
@@ -56,10 +58,10 @@ async def ensure_demo_admin_account():
         await db.users.update_one({"_id": existing_user["_id"]}, {"$set": update_fields})
         return
 
-    demo_admin_email = f"{admin_username}@demo.local"
+    demo_admin_email = f"{admin_username}@storemanager.app"
     email_suffix = 1
     while await db.users.find_one({"email": demo_admin_email}):
-        demo_admin_email = f"{admin_username}{email_suffix}@demo.local"
+        demo_admin_email = f"{admin_username}{email_suffix}@storemanager.app"
         email_suffix += 1
 
     demo_admin_user = {

@@ -2,6 +2,7 @@ import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
+from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
@@ -22,6 +23,7 @@ from utils.helpers import is_valid_objectid
 from utils.security import get_password_hash, verify_password
 
 router = APIRouter(prefix="/nguoi-dung", tags=["nguoi-dung"])
+FALLBACK_EMAIL_DOMAIN = "storemanager.app"
 
 
 @router.get("/ho-so", response_model=UserResponse)
@@ -197,7 +199,7 @@ def _employee_response_from_doc(user_doc: dict) -> EmployeeCreateResponse:
         id=str(user_doc["_id"]),
         username=user_doc["username"],
         full_name=user_doc.get("full_name"),
-        email=user_doc["email"],
+        email=_normalize_response_email(user_doc.get("email"), user_doc.get("username")),
         phone=user_doc.get("phone"),
         role=role,
     )
@@ -212,11 +214,25 @@ def _user_response_from_doc(user_doc: dict) -> UserResponse:
 
     return UserResponse(
         username=user_doc.get("username", ""),
-        email=user_doc.get("email", ""),
+        email=_normalize_response_email(user_doc.get("email"), user_doc.get("username")),
         role=role,
         full_name=user_doc.get("full_name"),
         phone=user_doc.get("phone"),
     )
+
+
+def _normalize_response_email(raw_email: object, raw_username: object) -> str:
+    email = str(raw_email or "").strip().lower()
+    if email:
+        try:
+            validate_email(email, check_deliverability=False)
+            return email
+        except EmailNotValidError:
+            pass
+
+    username = str(raw_username or "").strip().lower()
+    normalized_username = re.sub(r"[^a-z0-9._-]", "", username) or "user"
+    return f"{normalized_username}@{FALLBACK_EMAIL_DOMAIN}"
 
 
 def _current_user_object_id(current_user: dict) -> ObjectId | None:
