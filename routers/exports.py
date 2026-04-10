@@ -14,6 +14,13 @@ router = APIRouter(prefix="/xuat-kho", tags=["xuat-kho"])
 async def tao_phieu_xuat(order: ExportOrderCreate, current_admin: dict = Depends(get_current_admin)):
     db = get_db()
 
+    if not is_valid_objectid(order.target_branch_id):
+        raise HTTPException(status_code=400, detail="ID chi nhánh không hợp lệ")
+
+    branch = await db.branches.find_one({"_id": ObjectId(order.target_branch_id)})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Không tìm thấy chi nhánh đích")
+
     items_data = []
 
     for item in order.items:
@@ -62,6 +69,8 @@ async def tao_phieu_xuat(order: ExportOrderCreate, current_admin: dict = Depends
         "items": items_data,
         "reason": order.reason,
         "note": order.note,
+        "target_branch_id": order.target_branch_id,
+        "target_branch_name": branch["name"],
         "created_by": current_admin["username"],
         "created_at": datetime.now(timezone.utc)
     }

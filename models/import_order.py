@@ -9,6 +9,7 @@ class ImportItem(BaseModel):
 
 class ImportOrderCreate(BaseModel):
     supplier_id: Optional[str] = Field(None, description="ID nhà cung cấp")
+    source_branch_id: Optional[str] = Field(None, description="ID chi nhánh nguồn (cho đơn hoàn trả)")
     items: List[ImportItem] = Field(..., min_length=1, description="Danh sách sản phẩm nhập")
     note: Optional[str] = Field(None, description="Ghi chú")
 
@@ -22,6 +23,8 @@ class ImportOrderResponse(BaseModel):
     id: str
     supplier_id: Optional[str] = None
     supplier_name: Optional[str] = None
+    source_branch_id: Optional[str] = None
+    source_branch_name: Optional[str] = None
     items: List[ImportItemResponse]
     total_amount: float
     note: Optional[str] = None

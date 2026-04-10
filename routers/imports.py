@@ -21,6 +21,13 @@ async def tao_phieu_nhap(order: ImportOrderCreate, current_admin: dict = Depends
         if not supplier:
             raise HTTPException(status_code=404, detail="Không tìm thấy nhà cung cấp")
 
+    if order.source_branch_id:
+        if not is_valid_objectid(order.source_branch_id):
+            raise HTTPException(status_code=400, detail="ID chi nhánh không hợp lệ")
+        branch = await db.branches.find_one({"_id": ObjectId(order.source_branch_id)})
+        if not branch:
+            raise HTTPException(status_code=404, detail="Không tìm thấy chi nhánh nguồn")
+
     items_data = []
     total_amount = 0.0
 
@@ -68,9 +75,17 @@ async def tao_phieu_nhap(order: ImportOrderCreate, current_admin: dict = Depends
         if supplier:
             supplier_name = supplier["name"]
 
+    source_branch_name = None
+    if order.source_branch_id:
+        branch = await db.branches.find_one({"_id": ObjectId(order.source_branch_id)})
+        if branch:
+            source_branch_name = branch["name"]
+
     import_doc = {
         "supplier_id": order.supplier_id,
         "supplier_name": supplier_name,
+        "source_branch_id": order.source_branch_id,
+        "source_branch_name": source_branch_name,
         "items": items_data,
         "total_amount": total_amount,
         "note": order.note,
