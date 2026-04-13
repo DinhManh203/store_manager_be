@@ -18,6 +18,7 @@ from routers import (
     reports,
     notifications,
     branches,
+    categories,
 )
 from utils.security import get_password_hash
 
@@ -34,6 +35,7 @@ app.include_router(roles.router)
 app.include_router(reports.router)
 app.include_router(notifications.router)
 app.include_router(branches.router)
+app.include_router(categories.router)
 
 
 async def ensure_demo_admin_account():
