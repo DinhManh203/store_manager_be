@@ -34,18 +34,18 @@ def normalize_branch_name(value: Optional[str]) -> str:
 def validate_branch_name(name: Optional[str]) -> str:
     cleaned_name = normalize_text(name)
     if not cleaned_name:
-        raise HTTPException(status_code=400, detail="TÃªn chi nhÃ¡nh lÃ  báº¯t buá»™c")
+        raise HTTPException(status_code=400, detail="Tên chi nhánh là bắt buộc")
 
     if len(cleaned_name) < BRANCH_NAME_MIN_LENGTH:
         raise HTTPException(
             status_code=400,
-            detail=f"TÃªn chi nhÃ¡nh pháº£i cÃ³ Ã­t nháº¥t {BRANCH_NAME_MIN_LENGTH} kÃ½ tá»±",
+            detail=f"Tên chi nhánh phải có ít nhất {BRANCH_NAME_MIN_LENGTH} ký tự",
         )
 
     if len(cleaned_name) > BRANCH_NAME_MAX_LENGTH:
         raise HTTPException(
             status_code=400,
-            detail=f"TÃªn chi nhÃ¡nh tá»‘i Ä‘a {BRANCH_NAME_MAX_LENGTH} kÃ½ tá»±",
+            detail=f"Tên chi nhánh tối đa {BRANCH_NAME_MAX_LENGTH} ký tự",
         )
 
     return cleaned_name
@@ -59,7 +59,7 @@ def validate_phone(phone: Optional[str]) -> Optional[str]:
     if not PHONE_PATTERN.fullmatch(normalized_phone):
         raise HTTPException(
             status_code=400,
-            detail="Sá»‘ Ä‘iá»‡n thoáº¡i chi nhÃ¡nh khÃ´ng há»£p lá»‡",
+            detail="Số điện thoại chi nhánh không hợp lệ",
         )
 
     return normalized_phone
@@ -79,7 +79,7 @@ async def them_chi_nhanh(branch: BranchCreate, current_admin: dict = Depends(get
         }
     )
     if duplicated_branch:
-        raise HTTPException(status_code=400, detail="TÃªn chi nhÃ¡nh Ä‘Ã£ tá»“n táº¡i")
+        raise HTTPException(status_code=400, detail="Tên chi nhánh đã tồn tại")
 
     branch_dict = {
         "name": normalized_name,
@@ -95,7 +95,7 @@ async def them_chi_nhanh(branch: BranchCreate, current_admin: dict = Depends(get
     created = await db.branches.find_one({"_id": result.inserted_id})
     if created:
         return convert_objectid_to_str(created)
-    raise HTTPException(status_code=500, detail="KhÃ´ng thá»ƒ táº¡o chi nhÃ¡nh")
+    raise HTTPException(status_code=500, detail="Không thể tạo chi nhánh")
 
 @router.get("/danh-sach", response_model=List[BranchResponse])
 async def danh_sach_chi_nhanh():
@@ -107,7 +107,7 @@ async def danh_sach_chi_nhanh():
 async def chinh_sua_chi_nhanh(branch_id: str, branch_update: BranchUpdate, current_admin: dict = Depends(get_current_admin)):
     db = get_db()
     if not is_valid_objectid(branch_id):
-        raise HTTPException(status_code=400, detail="ID chi nhÃ¡nh khÃ´ng há»£p lá»‡")
+        raise HTTPException(status_code=400, detail="ID chi nhánh không hợp lệ")
 
     raw_update_data = branch_update.model_dump()
     model_fields_set = set(branch_update.model_fields_set)
@@ -127,7 +127,7 @@ async def chinh_sua_chi_nhanh(branch_id: str, branch_update: BranchUpdate, curre
             }
         )
         if duplicated_branch:
-            raise HTTPException(status_code=400, detail="TÃªn chi nhÃ¡nh Ä‘Ã£ tá»“n táº¡i")
+            raise HTTPException(status_code=400, detail="Tên chi nhánh đã tồn tại")
 
         update_data["name"] = normalized_name
         update_data["name_normalized"] = normalized_name_key
@@ -143,15 +143,15 @@ async def chinh_sua_chi_nhanh(branch_id: str, branch_update: BranchUpdate, curre
 
     if "is_active" in model_fields_set:
         if raw_update_data.get("is_active") is None:
-            raise HTTPException(status_code=400, detail="Tráº¡ng thÃ¡i hoáº¡t Ä‘á»™ng khÃ´ng há»£p lá»‡")
+            raise HTTPException(status_code=400, detail="Trạng thái hoạt động không hợp lệ")
         update_data["is_active"] = bool(raw_update_data["is_active"])
 
     if not update_data:
-        raise HTTPException(status_code=400, detail="KhÃ´ng cÃ³ dá»¯ liá»‡u gÃ¬ Ä‘á»ƒ cáº­p nháº­t")
+        raise HTTPException(status_code=400, detail="Không có dữ liệu gì để cập nhật")
 
     result = await db.branches.update_one({"_id": ObjectId(branch_id)}, {"$set": update_data})
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="KhÃ´ng tÃ¬m tháº¥y chi nhÃ¡nh")
+        raise HTTPException(status_code=404, detail="Không tìm thấy chi nhánh")
 
     updated = await db.branches.find_one({"_id": ObjectId(branch_id)})
     return convert_objectid_to_str(updated)
@@ -160,18 +160,18 @@ async def chinh_sua_chi_nhanh(branch_id: str, branch_update: BranchUpdate, curre
 async def xoa_chi_nhanh(branch_id: str, current_admin: dict = Depends(get_current_admin)):
     db = get_db()
     if not is_valid_objectid(branch_id):
-        raise HTTPException(status_code=400, detail="ID chi nhÃ¡nh khÃ´ng há»£p lá»‡")
+        raise HTTPException(status_code=400, detail="ID chi nhánh không hợp lệ")
 
     existing_branch = await db.branches.find_one({"_id": ObjectId(branch_id)})
     if not existing_branch:
-        raise HTTPException(status_code=404, detail="KhÃ´ng tÃ¬m tháº¥y chi nhÃ¡nh")
+        raise HTTPException(status_code=404, detail="Không tìm thấy chi nhánh")
 
     if bool(existing_branch.get("is_active", True)):
         raise HTTPException(
             status_code=400,
-            detail="Chá»‰ cÃ³ thá»ƒ xÃ³a chi nhÃ¡nh Ä‘ang ngá»«ng hoáº¡t Ä‘á»™ng",
+            detail="Chỉ có thể xóa chi nhánh đang ngừng hoạt động",
         )
 
     result = await db.branches.delete_one({"_id": ObjectId(branch_id)})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="KhÃ´ng tÃ¬m tháº¥y chi nhÃ¡nh")
+        raise HTTPException(status_code=404, detail="Không tìm thấy chi nhánh")

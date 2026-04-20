@@ -86,7 +86,7 @@ async def chinh_sua_san_pham(
         
     updated_product = await db.products.find_one({"_id": ObjectId(product_id)})
     if not updated_product:
-        raise HTTPException(status_code=404, detail="KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m")
+        raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
 
     try:
         await create_product_updated_notification(current_user, updated_product)
