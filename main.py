@@ -1,5 +1,6 @@
 import asyncio
 import os
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
@@ -78,17 +79,28 @@ async def ensure_demo_admin_account():
     await db.users.insert_one(demo_admin_user)
 
 
-@app.on_event("startup")
-async def startup_event():
-    async def seed_demo_admin():
-        try:
-            await asyncio.wait_for(ensure_demo_admin_account(), timeout=5)
-        except asyncio.TimeoutError:
-            print("[startup] Skip demo admin seed: database timeout")
-        except Exception as error:
-            print(f"[startup] Skip demo admin seed: {error}")
+async def seed_demo_admin():
+    try:
+        await asyncio.wait_for(ensure_demo_admin_account(), timeout=5)
+    except asyncio.TimeoutError:
+        print("[startup] Skip demo admin seed: database timeout")
+    except Exception as error:
+        print(f"[startup] Skip demo admin seed: {error}")
 
-    asyncio.create_task(seed_demo_admin())
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    seed_task = asyncio.create_task(seed_demo_admin())
+    try:
+        yield
+    finally:
+        if not seed_task.done():
+            seed_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await seed_task
+
+
+app.router.lifespan_context = lifespan
 
 
 @app.get("/")
